@@ -1,49 +1,69 @@
-FROM php:7.2
+FROM php:7.1
 
 MAINTAINER CodeDev <contato@codedev.com.br>
 
-# Update packages and install dependencies
-RUN apt-get update -yqq && apt-get install git \
-    libcurl4-gnutls-dev libicu-dev libmcrypt-dev \
-    libvpx-dev libjpeg-dev libpng-dev libxpm-dev \
-    zlib1g-dev libfreetype6-dev libxml2-dev \
-    libexpat1-dev libbz2-dev libgmp3-dev libldap2-dev \
-    unixodbc-dev libpq-dev libsqlite3-dev libaspell-dev \
-    libsnmp-dev libpcre3-dev libtidy-dev gnupg openssh-client \
-    libmagickwand-dev -yqq
+RUN apt-get update -yqq && apt-get install -yqq \
+    g++ \
+    git \
+    gnupg \
+    openssh-client \
+    libaspell-dev \
+    libbz2-dev \
+    libcurl4-gnutls-dev \
+    libexpat1-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libmcrypt-dev \
+    libpng-dev \
+    libgmp3-dev \
+    libicu-dev \
+    libjpeg-dev \
+    libldap2-dev \
+    libpcre3-dev \
+    libpq-dev \
+    libsnmp-dev \
+    libsqlite3-dev \
+    libtidy-dev \
+    libvpx-dev \
+    libxml2-dev \
+    libxpm-dev \
+    unixodbc-dev \
+    zlib1g-dev \
+    libmagickwand-dev --no-install-recommends
 
-# Install php extensions
-RUN docker-php-ext-install mbstring pdo_mysql curl json intl gd xml zip bz2 opcache
+RUN docker-php-ext-configure intl \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install curl \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mysqli \
+    && docker-php-ext-install soap \
+    && docker-php-ext-install json \
+    && docker-php-ext-install xml \
+    && docker-php-ext-install zip \
+    && docker-php-ext-install bz2 \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install iconv \
+    && docker-php-ext-configure mcrypt \
+    && docker-php-ext-install mcrypt \
+    && docker-php-ext-install opcache \
+    && pecl install imagick  \
+    && docker-php-ext-enable imagick \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug\
+    && pecl install apcu \
+    && docker-php-ext-enable apcu
 
-# Install & enable Imagick
-RUN pecl install imagick-beta \
-    && echo "extension=imagick.so" > /usr/local/etc/php/conf.d/ext-imagick.ini \
-    && apt-get remove -y \
-        libmagickwand-dev \
-    && apt-get install -y \
-        libmagickwand-6.q16-2
+RUN curl -sS https://getcomposer.org/installer | php \
+    && mv composer.phar /usr/local/bin/composer \
+    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
+    && apt-get install nodejs \
+    && npm install --global yarn \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get autoremove -y \
+    && mkdir -p ~/.ssh
 
-# Install & enable mcrypt
-RUN docker-php-ext-configure mcrypt && \
-    docker-php-ext-install mcrypt
+COPY ./opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
-# Install & enable Xdebug for code coverage reports
-RUN pecl install xdebug && \
-    docker-php-ext-enable xdebug
-
-# Install Composer and project dependencies.
-RUN curl -sS https://getcomposer.org/installer | php && \
-    mv composer.phar /usr/local/bin/composer
-
-# Upgrade to Node 8
-RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
-    apt-get install nodejs
-
-# SSH Folder
-RUN mkdir -p ~/.ssh
-
-# Clean instalation
-RUN rm -rf /var/lib/apt/lists/* \
-    && apt-get autoremove -y
-
-CMD ["bash"]
+CMD ["php-fpm"]
