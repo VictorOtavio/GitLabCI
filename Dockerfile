@@ -5,6 +5,7 @@ MAINTAINER CodeDev <contato@codedev.com.br>
 RUN apt-get update -yqq && apt-get install -yqq \
     git \
     gnupg \
+    openssh-client \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
